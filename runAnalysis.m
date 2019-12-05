@@ -1,4 +1,4 @@
-subjID = 'bjorn';%'benjamin'; %change according to subject
+subjID = 'aniko';%'bjorn';%'benjamin'; %change according to subject
 
 % non-hardcoded section:
 % path_ft = uigetdir([],'Give me the Field Trip folder!');
