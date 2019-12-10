@@ -1,4 +1,4 @@
-function [] = UiO_process_MIDA( MIDA, MIDApath, MIDAwrite )
+function [tissues] = UiO_process_MIDA( MIDA, MIDApath, MIDAwrite )
 % Remove air, downsample MIDA (which should contain filename and/or path of MIDA model, and location to write to disk and write the TPMs for segmentation
 % This script loads and preprocesses MIDA and calculates tissue propability maps 
 % (TPM) of the MIDA which will be used in a different script to normalize
@@ -48,6 +48,9 @@ Seg.unit = 'mm';
 
 MIDA_withoutair = MIDA;
 MIDA_withoutair.anatomy(Seg.Background)=0;
+
+withoutair = [MIDAwrite '\MIDA_withoutair.nii'];
+
 cfg=[];
 cfg.downsample=2;
 cfg.method='nearest';
@@ -55,7 +58,7 @@ cfg.smooth='no';
 cfg.spmversion='spm12';
 MIDA_withoutair=ft_volumedownsample(cfg,MIDA_withoutair);
 
-ft_write_mri([MIDAwrite 'MIDA_withoutair.nii'],MIDA_withoutair,'dataformat','nifti');
+ft_write_mri(withoutair,MIDA_withoutair,'dataformat','nifti');
 
 
 %% Write and smooth TPM segments
@@ -66,12 +69,14 @@ myTPM.anatomy=zeros(myTPM.dim);
 myTPM.anatomy(Seg.Gray)=0.999;
 myTPM.anatomy(~Seg.Gray)=0.001;
 
+gray = [MIDAwrite '\TPM_gray.nii'];
+
 cfg=[];
 cfg.downsample=2;
 cfg.smooth=500;
 cfg.spmversion='spm12';
 myTPM=ft_volumedownsample(cfg,myTPM);
-ft_write_mri([MIDAwrite 'TPM_gray.nii'],myTPM,'dataformat','nifti');
+ft_write_mri(gray,myTPM,'dataformat','nifti');
 
 
 myTPM=MIDA;
@@ -80,12 +85,14 @@ myTPM.anatomy=zeros(myTPM.dim);
 myTPM.anatomy(Seg.White)=0.999;
 myTPM.anatomy(~Seg.White)=0.001;
 
+white = [MIDAwrite '\TPM_white.nii'];
+
 cfg=[];
 cfg.downsample=2;
 cfg.smooth=500;
 cfg.spmversion='spm12';
 myTPM=ft_volumedownsample(cfg,myTPM);
-ft_write_mri([MIDAwrite 'TPM_white.nii'],myTPM,'dataformat','nifti');
+ft_write_mri(white,myTPM,'dataformat','nifti');
 
 
 myTPM=MIDA;
@@ -94,12 +101,14 @@ myTPM.anatomy=zeros(myTPM.dim);
 myTPM.anatomy(Seg.Soft)=0.999;
 myTPM.anatomy(~Seg.Soft)=0.001;
 
+soft = [MIDAwrite '\TPM_soft.nii'];
+
 cfg=[];
 cfg.downsample=2;
 cfg.smooth=500;
 cfg.spmversion='spm12';
 myTPM=ft_volumedownsample(cfg,myTPM);
-ft_write_mri([MIDAwrite 'TPM_soft.nii'],myTPM,'dataformat','nifti');
+ft_write_mri(soft,myTPM,'dataformat','nifti');
 
 
 myTPM=MIDA;
@@ -108,12 +117,14 @@ myTPM.anatomy=zeros(myTPM.dim);
 myTPM.anatomy(Seg.Bone)=0.999;
 myTPM.anatomy(~Seg.Bone)=0.001;
 
+bone = [MIDAwrite '\TPM_bone.nii'];
+
 cfg=[];
 cfg.downsample=2;
 cfg.smooth=500;
 cfg.spmversion='spm12';
 myTPM=ft_volumedownsample(cfg,myTPM);
-ft_write_mri([MIDAwrite 'TPM_bone.nii'],myTPM,'dataformat','nifti');
+ft_write_mri(bone,myTPM,'dataformat','nifti');
 
 
 myTPM=MIDA;
@@ -122,12 +133,14 @@ myTPM.anatomy=zeros(myTPM.dim);
 myTPM.anatomy(Seg.CSF)=0.999;
 myTPM.anatomy(~Seg.CSF)=0.001;
 
+CSF = [MIDAwrite '\TPM_CSF.nii'];
+
 cfg=[];
 cfg.downsample=2;
 cfg.smooth=500;
 cfg.spmversion='spm12';
 myTPM=ft_volumedownsample(cfg,myTPM);
-ft_write_mri([MIDAwrite 'TPM_CSF.nii'],myTPM,'dataformat','nifti');
+ft_write_mri(CSF,myTPM,'dataformat','nifti');
 
 
 myTPM=MIDA;
@@ -135,13 +148,24 @@ myTPM=MIDA;
 myTPM.anatomy=ones(myTPM.dim)*0.999;
 myTPM.anatomy(~Seg.Background)=0.001;
 
+background = [MIDAwrite '\TPM_background.nii'];
+
 cfg=[];
 cfg.downsample=2;
 cfg.smooth=500;
 cfg.spmversion='spm12';
 myTPM=ft_volumedownsample(cfg,myTPM);
-ft_write_mri([MIDAwrite 'TPM_background.nii'],myTPM,'dataformat','nifti');
+ft_write_mri(background,myTPM,'dataformat','nifti');
 disp('Done. All TPMs and MIDA are written into nifti.');
+
+tissues = struct();
+tissues.withoutair = withoutair;
+tissues.gray = gray;
+tissues.white = white;
+tissues.soft = soft;
+tissues.bone = bone;
+tissues.CSF = CSF;
+tissues.background = background;
 end
 
 

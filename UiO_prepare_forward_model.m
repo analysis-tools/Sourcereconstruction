@@ -1,10 +1,11 @@
-function [] = UiO_forward_model_12T_FEM(mri_data, mri_path, save_folder, loc_file, loc_path, path_ft)
+function [mesh_name,elec_name,vol_name,SegGray_name] = UiO_prepare_forward_model(mri_data, save_folder, loc_file, loc_path)
 % for debugging
-mri_data = [subjID 'MIDA_withoutair.nii'];
-mri_path = save_folder;
+% mri_data = [subjID 'MIDA_withoutair.nii'];
+% mri_path = save_folder;
+% mri_data = [mri_path,mri_data];
 
 %% load MIDA and segment
-MIDA_mri = ft_read_mri([mri_path mri_data]);
+MIDA_mri = ft_read_mri(mri_data);
 
 % cfg = [];
 % cfg.spmversion     = 'spm12';
@@ -107,6 +108,41 @@ path_loc_spec = [loc_path,loc_file];
 elec_xyz = ft_read_sens(path_loc_spec);
 
 
+%% Adjust final position of electrodes by eye
+% this is not necessary when using Simbio since it takes the closest vertex
+% of the outer skin as electrode positions...
+% 
+disp('preparing for final adjustments of the electrode positions')
+disp('this takes a couple of minutes')
+cfg           = [];
+cfg.method    = 'interactive';
+cfg.elec      = elec_xyz;
+cfg.headshape = vol;
+elec_aligned  = ft_electroderealign(cfg);
+elec_aligned = ft_convert_units(elec_aligned,'mm');
+
+mesh_name = [save_folder '\mesh.mat'];
+elec_name = [save_folder '\elec_aligned.mat'];
+vol_name = [save_folder '\vol.mat'];
+SegGray_name = [save_folder '\SegGray.mat'];
+
+save(mesh_name,'mesh','-v7.3');
+save(elec_name,'elec_aligned','-v7.3');
+save(vol_name,'vol','-v7.3');
+save(SegGray_name,'SegGray','-v7.3');
+
+end
+
+
+% %% Plot electrode positions after realignment 
+% figure;
+% hold on;
+% ft_plot_mesh(mesh,'surfaceonly','yes','vertexcolor','none','edgecolor','none','facecolor',[0.5 0.5 0.5],'face alpha',0.5)
+% % camlight
+% % electrodes
+% ft_plot_sens(elec_aligned,'label','label');
+% title('Electrode positions after realignment');
+
 
 % %%%%%% hard coded passage (flip channels for UiO eeg-cap; look for EM and
 % %%%%%% EO for Sebastian eeg files)
@@ -170,21 +206,3 @@ elec_xyz = ft_read_sens(path_loc_spec);
 % 
 % % elec = ft_determine_coordsys(elec_aligned);
 % %%%%%%%
-
-
-%% Adjust final position of electrodes by eye
-% this is not necessary when using Simbio since it takes the closest vertex
-% of the outer skin as electrode positions...
-% 
-disp('preparing for final adjustments of the electrode positions')
-disp('this takes a couple of minutes')
-cfg           = [];
-cfg.method    = 'interactive';
-cfg.elec      = elec_xyz;
-cfg.headshape = vol;
-elec_aligned  = ft_electroderealign(cfg);
-elec_aligned = ft_convert_units(elec_aligned,'mm');
-
-
-end
-

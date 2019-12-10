@@ -1,20 +1,24 @@
-subjID = 'aniko';%'bjorn';%'benjamin'; %change according to subject
+
+
+subjID = '101';%'benjamin'; %change according to subject
 
 % non-hardcoded section:
-% path_ft = uigetdir([],'Give me the Field Trip folder!');
-% path_spm = uigetdir([],'Give me the SPM folder!');
-% save_folder = uigetdir([],'where do you want to save the MIDA template and TPM?');
-% [MIDA, MIDApath] = uigetfile('*.nii', 'Pick unmodified MIDA template');
-% [loc_file,loc_path] = uigetfile('*.*','Feed me the EEG electrode locations');
+path_ft = uigetdir([],'Give me the Field Trip folder!'); % should be in lagringshotell
+path_spm = uigetdir([],'Give me the SPM12 folder!'); % should be in lagringshotell
+path_simbio = uigetdir([],'Give me the simbio folder (from fieldtrip)!'); % should be in lagringshotell
+save_folder = uigetdir([],'where do you want to save the MIDA template and TPM?'); % for participant
+[MIDA, MIDApath] = uigetfile('*.nii', 'Pick unmodified MIDA template'); % should be in lagringshotell
+[loc_file,loc_path] = uigetfile('*.*','Feed me the EEG electrode locations'); % should be in lagringshotell
 
-% hardcoded:
-path_ft = 'Z:\Matlab_Scripts\Fieldtrip\new_fieldtrip';
-path_spm = 'Z:\Matlab_Scripts\spm12\spm12';
-save_folder = 'Z:\Matlab_Scripts\MIDA_modified';
-MIDA = 'MIDA_v1.nii';
-MIDApath = 'Z:\07_fNetworks_rest-state\MIDA_head-model\MIDAv1.0\MIDA_v1.0\MIDA_v1_voxels';
-loc_file = 'OsloLab_62channel.elp';
-loc_path = 'Z:\07_fNetworks_rest-state\data_attentional-load';
+
+% % Bennys hardcoded:
+% path_ft = 'Z:\Matlab_Scripts\Fieldtrip\new_fieldtrip';
+% path_spm = 'Z:\Matlab_Scripts\spm12\spm12';
+% save_folder = 'Z:\Matlab_Scripts\MIDA_modified';
+% MIDA = 'MIDA_v1.nii';
+% MIDApath = 'Z:\07_fNetworks_rest-state\MIDA_head-model\MIDAv1.0\MIDA_v1.0\MIDA_v1_voxels';
+% loc_file = 'OsloLab_62channel.elp';
+% loc_path = 'Z:\07_fNetworks_rest-state\data_attentional-load';
 
 
 %% if subject MIR only a DICOM run this section
@@ -25,8 +29,10 @@ ft_defaults;
 [subjectMRI_DICOM, subjectMRIpath_DICOM] = uigetfile('*.*', 'Pick subject MRI in DICOM');
 save_folder_nifti = uigetdir([],'where do you want to save NIFTI file?');
 
+disp('Loading MRI')
 mri = ft_read_mri([subjectMRIpath_DICOM subjectMRI_DICOM]);
 
+disp('Writing sources')
 cfg = [];
 cfg.filename  = [save_folder_nifti '\' subjectMRI_DICOM];
 cfg.filetype  = 'nifti';
@@ -36,20 +42,17 @@ ft_sourcewrite(cfg, mri);
 % [subjectMRI, subjectMRIpath] = uigetfile('*.nii', 'Pick subject MRI');
 subjectMRI = [subjectMRI_DICOM '.nii'];
 subjectMRIpath = [save_folder_nifti '\'];
-
+disp('section completed')
 
 %% When subject MRI available as NIFTI, start with this section
 [subjectMRI, subjectMRIpath] = uigetfile('*.nii', 'Pick subject MRI');
-
 
 if ispc
     save_folder = [save_folder '\'];
 else
     save_folder = [save_folder '/'];
 end
-
-
-
+disp('section completed')
 
 
 %% Process MIDA with fieldtrip
@@ -61,11 +64,13 @@ tmp = matlab.desktop.editor.getActive;
 cd(fileparts(tmp.Filename));
 
 UiO_process_MIDA(MIDA, MIDApath, save_folder);
+disp('section completed')
 
 %% Warp to subject space with SPM
 restoredefaultpath;
 addpath(genpath(path_spm));
 
+disp('This takes about 20 minutes. How about a coffe and a discussion about the nature of consciousness?')
 tmp = matlab.desktop.editor.getActive;
 cd(fileparts(tmp.Filename));
 
@@ -74,8 +79,10 @@ UiO_transform_MIDA_to_subject(save_folder, subjectMRI, subjectMRIpath, save_fold
 %% Create 12 tissue FEM model
 restoredefaultpath;
 addpath(path_ft);
+addpath(path_simbio);
 ft_defaults;
 
+disp('This takes about 8 hours. Are you sure this is the best idea?')
 tmp = matlab.desktop.editor.getActive;
 cd(fileparts(tmp.Filename));
 
