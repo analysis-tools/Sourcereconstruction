@@ -59,19 +59,47 @@ restoredefaultpath;
 addpath(path_ft);
 ft_defaults;
 
-% dont know what this does
-tmp = matlab.desktop.editor.getActive;
-cd(fileparts(tmp.Filename));
+while 1
+    prompt = 'Is the MIDA model tissues already in your project folder? [y/n]: ';
+    folder_structure = input(prompt,'s');
+    
+    if strcmp(folder_structure,'n') || strcmp(folder_structure,'N')
+        
+        tmp = matlab.desktop.editor.getActive;
+        cd(fileparts(tmp.Filename));
+        
+        % processing the mida model for this project
+        MIDAtissues = UiO_process_MIDA(MIDA, MIDApath, path_project);
+        
+        % storing relevant fields in data structure
+        project_data.MIDAtissues = MIDAtissues;
+        break
+        
+    elseif strcmp(folder_structure,'y') || strcmp(folder_structure,'Y')
+        
+        if exist([project_data.path_project 'MIDA_withoutair.nii']) == 2
+            project_data.MIDAtissues.withoutair = [project_data.path_project 'MIDA_withoutair.nii'];
+            project_data.MIDAtissues.gray = [project_data.path_project 'TPM_gray.nii'];
+            project_data.MIDAtissues.white = [project_data.path_project 'TPM_white.nii'];
+            project_data.MIDAtissues.soft = [project_data.path_project 'TPM_soft.nii'];
+            project_data.MIDAtissues.bone = [project_data.path_project 'TPM_bone.nii'];
+            project_data.MIDAtissues.CSF = [project_data.path_project 'TPM_CSF.nii'];
+            project_data.MIDAtissues.background = [project_data.path_project 'TPM_background.nii'];
+            break
+        else
+            folder_structure = 'n';
+        end
+        
+    else
+        disp('answer only Y or N!')
+    end
+end
 
-% processing the mida model for this project
-MIDAtissues = UiO_process_MIDA(MIDA, MIDApath, path_project);
-
-% storing relevant fields in data structure
-project_data.MIDAtissues = MIDAtissues;
 disp('section completed')
 
 %% Looping through all participants to prepare for FEM calculation
 for n = 1:N
+
     
     subjID = participant_IDs{n};
     save_folder = [path_project, filesep, subjID, filesep]; % folder for participant
@@ -84,7 +112,7 @@ for n = 1:N
     
     %% Creating (or loading) Nifti MRI of subject
     while 1
-        prompt = 'Does a Nifti (.nii) version of the subject MRI exist [y/n]: ';
+        prompt = ['Does a Nifti (.nii) version of subject ' subjID ' MRI exist [y/n]: '];
         nifti_exists = input(prompt,'s');
          
         if strcmp(nifti_exists,'n') || strcmp(nifti_exists,'N')
@@ -92,7 +120,7 @@ for n = 1:N
             addpath(path_ft);
             ft_defaults;
             
-            [subjectMRI_DICOM, subjectMRIpath_DICOM] = uigetfile('*.*', 'Pick subject MRI in DICOM');
+            [subjectMRI_DICOM, subjectMRIpath_DICOM] = uigetfile([project_data.path_project '*.*'], 'Pick subject MRI in DICOM');
             
             disp('Loading MRI')
             mri = ft_read_mri([subjectMRIpath_DICOM subjectMRI_DICOM]);
@@ -113,7 +141,7 @@ for n = 1:N
             
         elseif strcmp(nifti_exists,'y') || strcmp(nifti_exists,'Y')
             % When subject MRI available as NIFTI, start with this section
-            [subjectMRI, subjectMRIpath] = uigetfile('*.nii', 'Pick subject nifti file');
+            [subjectMRI, subjectMRIpath] = uigetfile([project_data.path_project '*.nii'], 'Pick subject nifti file');
             disp('section completed')
             break
             
@@ -147,7 +175,7 @@ for n = 1:N
     tmp = matlab.desktop.editor.getActive;
     cd(fileparts(tmp.Filename));
     
-    subject_MIDA_tissues = UiO_transform_MIDA_to_subject(project_data.path_project, project_data.MIDAtissues.withoutair, participant_data(n), participant_data(n)subjectMRIpath, subjID);
+    subject_MIDA_tissues = UiO_transform_MIDA_to_subject(project_data.path_project, project_data.MIDAtissues.withoutair, participant_data(n).subjectMRI, participant_data(n).subjectMRIpath, subjID);
     % storing relevant fields in data structure
     participant_data(n).MIDA_tissues = subject_MIDA_tissues;
 end
@@ -220,9 +248,6 @@ save([path_project, '\participant_data.mat'],'participant_data','-v7.3');
 
 
 %% Calculate inverse solution
-restoredefaultpath;
-addpath(path_ft);
-ft_defaults;
 
 % checking if data needs loading
 if ~exist('participant_data','var')
@@ -235,17 +260,41 @@ end
 % tmp = matlab.desktop.editor.getActive;
 % cd(fileparts(tmp.Filename));
 
-% getting filenames for all EEG files
-for n = 1:N
-    eeg_data = struct([]);
-    for s = 1:S
-        [EEG_file,EEG_path] = uigetfile('*.*','Feed me the EEG data');
-        eeg_data(s).file = EEG_file;
-        eeg_data(s).path = EEG_path;
+% getting filenames for all EEG files (EEGlab structs)
+
+prompt = 'Are your EEG files saved as EEGlab structs? [y/n]: ';
+eegfile_prompt = input(prompt,'s');
+
+if strcmp(eegfile_prompt,'y') || strcmp(eegfile_prompt,'Y')
+    for n = 1:N
+        eeg_data = struct([]);
+        for s = 1:S
+            [EEG_file,EEG_path] = uigetfile([project_data.path_project '*.*'],['Feed me the EEG data for subject (.mat eeglab struct)' participant_data(n).subjID ', session ' s]);
+            eeg_data(s).file = EEG_file;
+            eeg_data(s).path = EEG_path;
+        end
+        participant_data(n).eeg_data = eeg_data;
+        
     end
-    participant_data(n).eeg_data = eeg_data;
     
+else
+    disp('Convert your files...');
 end
+% saving data structures
+save([path_project, '\participant_data.mat'],'participant_data','-v7.3');
+
+% checking if data needs loading
+if ~exist('participant_data','var')
+    load([path_project, '\participant_data.mat']);
+end
+if ~exist('project_data','var')
+    load([path_project, '\project_data.mat']);
+end
+
+%
+restoredefaultpath;
+addpath(path_ft);
+ft_defaults;
 
 % calculating inverse solution for all data
 for n = 1:N
